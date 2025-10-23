@@ -1,7 +1,7 @@
-# Atelier pédagogique sur l'entraînement des réseaux de neuronnes
+# Atelier pédagogique sur l'entraînement des réseaux de neurones
 
 Utilisation :
-1. Téléchargez le fichier [AteliserReseauxDeNeuronnes.zip](https://github.com/xprov/AtelierReseauxDeNeuronnes/archive/refs/heads/main.zip)
+1. Téléchargez le fichier [AteliserReseauxDeNeurones.zip](https://github.com/xprov/AtelierReseauxDeNeuonnes/archive/refs/heads/main.zip)
 2. Extraire le contenu.
 3. Exécuter `lancerAtelier`
   - __Linux__ : exécuter le script `lancerAtelier.py`
