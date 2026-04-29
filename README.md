@@ -16,4 +16,3 @@ Un navigateur web devrait s'ouvrir affichant des liens vers les trois __missions
  - Les exécutables du dossier `bin` proviennent du projet : [NeuralNetwork](https://github.com/xprov/NeuralNetwork)
 
 
-
