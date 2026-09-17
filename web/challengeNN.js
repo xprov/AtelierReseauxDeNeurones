@@ -10,13 +10,34 @@
  *
  */
 
+function f_act(x) {
+  return Math.max(Math.min(x, 100), -100);
+}
+
+function createHatchPattern(ctx, color = "black") {
+    const patternCanvas = document.createElement("canvas");
+    patternCanvas.width = 8;
+    patternCanvas.height = 8;
+
+    const pctx = patternCanvas.getContext("2d");
+
+    pctx.strokeStyle = color;
+    pctx.lineWidth = 1;
+
+    pctx.beginPath();
+    pctx.moveTo(0, 8);
+    pctx.lineTo(8, 0);
+    pctx.stroke();
+
+    return ctx.createPattern(patternCanvas, "repeat");
+}
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 class Parameter {
-  constructor(challengeId, minValue, maxValue, defaultValue) {
+  constructor(challengeId, minValue = -1, maxValue = 1, defaultValue = 0.25) {
     this.challengeId = challengeId;
     this.minValue = minValue;
     this.maxValue = maxValue;
@@ -350,6 +371,42 @@ class Challenge {
     return parseFloat(this.parameters[name].slider.value);
   }
 
+  drawLinkBetweenNeurons(ctx, paramName, i, j) {
+    let w = this.parameterValue(paramName);	
+    if (w < 0) {
+      ctx.setLineDash([5, 5]);
+    }
+    ctx.lineWidth = Math.max(1, Math.abs(w)*10);
+    ctx.beginPath();
+
+    let X0 = this.convertX(this.nodes[i].x);
+    let Y0 = this.convertY(this.nodes[i].y);
+
+    let X1 = this.convertX(this.nodes[j].x);
+    let Y1 = this.convertY(this.nodes[j].y);
+
+    ctx.moveTo(X0, Y0);
+    ctx.lineTo(X1, Y1);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  drawNode(ctx, node) {
+    ctx.lineWidth = this.defaultLineWidth;
+    let X = this.convertX(node.x);
+    let Y = this.convertY(node.y);
+
+    ctx.beginPath();
+
+    ctx.arc(X, Y, this.nodeRadius, 0, 2*Math.PI, false);
+    ctx.fillStyle = "white";
+    ctx.fill();
+    ctx.stroke();
+    ctx.arc(X, Y, this.nodeRadius, 0, 2*Math.PI, false);
+    ctx.fillStyle = createHatchPattern(ctx, this.getGray(node.activation));
+
+  }
+
   drawThermometer() {
     let ctx = this.thermometer.getContext("2d");
     ctx.fillStyle = "white";
@@ -405,12 +462,12 @@ class Challenge {
         p.slider.value = x + this.gradientStep;
       }
 
-      console.log("" + params[i] + " = " + x + " -> " + p.slider.value + ", delta = " + delta + ", D_err=" + (this.computeError() - e0));
+      //console.log("" + params[i] + " = " + x + " -> " + p.slider.value + ", delta = " + delta + ", D_err=" + (this.computeError() - e0));
     }
 
     let errorAfter = this.computeError()
     if (errorAfter >= errorBefore) {
-      console.log('diminution du step')
+      //console.log('diminution du step')
       this.gradientStep = this.gradientStep / 1.1;
       this.grosseTriche = this.grosseTriche / 2;
       //throw new Error("L'erreur augmente!");
@@ -501,7 +558,7 @@ class ChallengeNN1 extends Challenge {
     // Construction des paramètres
     //
     // Pour ce challenge, il n'y a qu'un seul paramètre, soit le poids de l'unique arête.
-    this.parameters["a"] = new Parameter(challengeId, 0, 1, 0.5);
+    this.parameters["a"] = new Parameter(challengeId);
 
     this.addToDocument(); // ligne obligatoire
     this.update(); // ligne obligatoire
@@ -511,7 +568,7 @@ class ChallengeNN1 extends Challenge {
    * Évaluation de l'activation de chacun des neurones, à partir des valeur en entré.
    */
   propagate() {
-    this.nodes[1].activation = this.parameterValue('a') * this.nodes[0].activation;
+    this.nodes[1].activation = f_act(this.parameterValue('a') * this.nodes[0].activation);
   }
 
   /**
@@ -527,45 +584,21 @@ class ChallengeNN1 extends Challenge {
     ctx.fillRect(0,0, this.canvas.width, this.canvas.height);
 
 
-    // On récupère la valeur du poids
-    let w = this.parameterValue("a");	
 
     // On dessine d'abord les arêtes
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = Math.max(1, w*10);
-    ctx.beginPath();
-
-    let X0 = this.convertX(this.nodes[0].x);
-    let Y0 = this.convertY(this.nodes[0].y);
-
-    let X1 = this.convertX(this.nodes[1].x);		
-    let Y1 = this.convertY(this.nodes[1].y);
-
-    ctx.moveTo(X0, Y0);
-    ctx.lineTo(X1, Y1);
-    ctx.stroke();	
+    this.drawLinkBetweenNeurons(ctx, "a", 0, 1);
 
     // Maintenant, on dessine les neurones
     // On commence par mettre à jour l'activation du neurone de sortie
-    this.nodes[1].activation = w * this.nodes[0].activation;	
-
-    ctx.lineWidth = this.defaultLineWidth;
+    this.propagate();
 
     for(let i = 0; i < this.NUM_NODES; i++)
     {
-      let X = this.convertX(this.nodes[i].x);
-      let Y = this.convertY(this.nodes[i].y);
-
-      ctx.beginPath();
-
-      ctx.fillStyle = this.getGray(this.nodes[i].activation);
-      ctx.arc(X, Y, this.nodeRadius, 0, 2*Math.PI, false);
-
-      ctx.fill();
-      ctx.stroke();
+      this.drawNode(ctx, this.nodes[i]);
     }	
 
     // Finalement, on dessine la zone de sortie attendue
+    ctx.lineWidth = this.defaultLineWidth;
     ctx.fillStyle = this.getGray(75);
     ctx.lineWidth = 2; 
     ctx.moveTo(this.convertX(13.5), this.convertY(-4));
@@ -687,10 +720,10 @@ class ChallengeNN2 extends Challenge {
     // Construction des paramètres
     //
     // Pour ce challenge, il y a 4 paramètres.
-    this.parameters["a"] = new Parameter(challengeId, 0, 1, 0.5);
-    this.parameters["b"] = new Parameter(challengeId, 0, 1, 0.5);
-    this.parameters["c"] = new Parameter(challengeId, 0, 1, 0.5);
-    this.parameters["d"] = new Parameter(challengeId, 0, 1, 0.5);
+    this.parameters["a"] = new Parameter(challengeId);
+    this.parameters["b"] = new Parameter(challengeId);
+    this.parameters["c"] = new Parameter(challengeId);
+    this.parameters["d"] = new Parameter(challengeId);
 
     this.addToDocument(); // ligne obligatoire
     this.update(); // ligne obligatoire
@@ -715,10 +748,6 @@ class ChallengeNN2 extends Challenge {
   drawSelf() 
   {
 
-    let ctx = this.canvas.getContext("2d");
-
-    ctx.fillStyle = "white";
-    ctx.fillRect(0,0, this.canvas.width, this.canvas.height);
 
 
     // On récupère la valeur du poids
@@ -737,32 +766,20 @@ class ChallengeNN2 extends Challenge {
     // On dessine d'abord les arêtes
 
 
+    let ctx = this.canvas.getContext("2d");
+    ctx.fillStyle = "white";
+    ctx.fillRect(0,0, this.canvas.width, this.canvas.height);
     ctx.strokeStyle = '#000000';
 
 
-    // Ici, i seront les neurones de la couche d'entrée
-    // et j ceux de la couche de sortie
-    for(let i = 0; i < 2; i++)
-    {
-      for(let j=0; j < 2; j++)
-      {
-        ctx.lineWidth = Math.max(1, weights[2*j + i]*10);
-        ctx.beginPath();
-
-
-        let X0 = this.convertX(this.nodes[i].x);
-        let Y0 = this.convertY(this.nodes[i].y);
-
-        let X1 = this.convertX(this.nodes[j+2].x);		
-        let Y1 = this.convertY(this.nodes[j+2].y);
-
-        ctx.moveTo(X0, Y0);
-        ctx.lineTo(X1, Y1);
-        ctx.stroke();		
+    // Ici, i seront les neurones de la couche d'entrée et j ceux de la couche de sortie
+    for(let i = 0; i < 2; i++) {
+      for(let j=0; j < 2; j++) {
+        this.drawLinkBetweenNeurons(ctx, "a", i, j);
       }
     }
 
-    // On va maintenant mettre à jour les activations de la couche de sortie
+    // Mettre à jour les activations de la couche de sortie
     this.nodes[2].activation = Math.min(100, d * this.nodes[0].activation + b * this.nodes[1].activation);
     this.nodes[3].activation = Math.min(100, c * this.nodes[0].activation + a * this.nodes[1].activation);
 
@@ -811,7 +828,7 @@ class ChallengeNN2 extends Challenge {
     let err2 = this.nodes[3].activation - this.nodes[5].activation; 
     let mse = (err1*err1 + err2*err2) / 2;
     //console.log(mse);
-    console.log(mse * this.adhocErrorFactor * this.grosseTriche);
+    //console.log(mse * this.adhocErrorFactor * this.grosseTriche);
     return mse * this.adhocErrorFactor * this.grosseTriche;
   }
 
@@ -934,14 +951,14 @@ class ChallengeNN3 extends Challenge {
     // Construction des paramètres
     //
     // Pour ce challenge, il y a 6 paramètres.
-    this.parameters["a"] = new Parameter(challengeId,  0, 1, 0.5);
-    this.parameters["b"] = new Parameter(challengeId,  0, 1, 0.5);
-    this.parameters["c"] = new Parameter(challengeId,  0, 1, 0.5);
-    this.parameters["d"] = new Parameter(challengeId,  0, 1, 0.5);
-    this.parameters["e"] = new Parameter(challengeId,  0, 1, 0.5);
-    this.parameters["f"] = new Parameter(challengeId,  0, 1, 0.5);
-    this.parameters["g"] = new Parameter(challengeId,  0, 1, 0.5);
-    this.parameters["h"] = new Parameter(challengeId,  0, 1, 0.5);
+    this.parameters["a"] = new Parameter(challengeId);
+    this.parameters["b"] = new Parameter(challengeId);
+    this.parameters["c"] = new Parameter(challengeId);
+    this.parameters["d"] = new Parameter(challengeId);
+    this.parameters["e"] = new Parameter(challengeId);
+    this.parameters["f"] = new Parameter(challengeId);
+    this.parameters["g"] = new Parameter(challengeId);
+    this.parameters["h"] = new Parameter(challengeId);
 
 
     this.addToDocument("ATTENTION : voici trois copies du même réseau avec des entrées différentes.<br>Les paramètres a, b, c, ..., h doivent satisfaire les trois paires entrée/sortie."); // ligne obligatoire
@@ -1143,12 +1160,12 @@ class ChallengeNN4 extends Challenge {
     // Construction des paramètres
     //
     // Pour ce challenge, il y a 6 paramètres.
-    this.parameters["a"] = new Parameter(challengeId, 0, 1, 0.5);
-    this.parameters["b"] = new Parameter(challengeId, 0, 1, 0.5);
-    this.parameters["c"] = new Parameter(challengeId, 0, 1, 0.5);
-    this.parameters["d"] = new Parameter(challengeId, 0, 1, 0.5);
-    this.parameters["e"] = new Parameter(challengeId, 0, 1, 0.5);
-    this.parameters["f"] = new Parameter(challengeId, 0, 1, 0.5);
+    this.parameters["a"] = new Parameter(challengeId);
+    this.parameters["b"] = new Parameter(challengeId);
+    this.parameters["c"] = new Parameter(challengeId);
+    this.parameters["d"] = new Parameter(challengeId);
+    this.parameters["e"] = new Parameter(challengeId);
+    this.parameters["f"] = new Parameter(challengeId);
 
     this.addToDocument(); // ligne obligatoire
     this.update(); // ligne obligatoire
@@ -1275,7 +1292,7 @@ class ChallengeNN4 extends Challenge {
     let err1 = this.nodes[2].activation - this.nodes[4].activation; 
     let err2 = this.nodes[3].activation - this.nodes[5].activation; 
     let mse = (err1 * err1 + err2 * err2) / 2;
-    console.log(mse * this.adhocErrorFactor * this.grosseTriche);
+    //console.log(mse * this.adhocErrorFactor * this.grosseTriche);
     return mse * this.adhocErrorFactor * this.grosseTriche;
   }
 
@@ -1381,3 +1398,5 @@ if (status >= 1) {
   thermometres();
 }
 
+// debug
+activateAll()
