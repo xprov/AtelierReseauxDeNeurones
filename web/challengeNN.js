@@ -240,36 +240,32 @@ class Challenge {
     if ((this.numLayers == 2) && (this.numCopies == 1)) {
       this.canvas.width = 650;
       this.canvas.height = 300;
-      this.xmin = -1;  // On veut garder un offset horizontal équivalent à une unité à gauche et à droite du premier/dernier neurone.
-      this.xmax = 18;  // L'intervalle horizontal est donc de 12 + 2 unités de offset plus 5 autres unités pour afficher l'objectif.
-      this.ymin = -5; // Même chose, mais pour une plage verticale de longueur 8, centrée en 0.
-      this.ymax = 5;
-      this.nodeRadius = 20;
-      this.defaultLineWidth = 3;
+    }
+    else if ((this.numLayers == 4) && (this.numCopies == 2)) {
+      this.canvas.width = 750;
+      this.canvas.height = 400;
+    }
+    else if ((this.numLayers == 2) && (this.numCopies == 2)) {
+      this.canvas.width = 650;
+      this.canvas.height = 400;
     }
     else if ((this.numLayers == 2) && (this.numCopies == 3)) {
       this.canvas.width = 650;
       this.canvas.height = 700;
-      this.xmin = -1;  // On veut garder un offset horizontal équivalent à une unité à gauche et à droite du premier/dernier neurone.
-      this.xmax = 18;  // L'intervalle horizontal est donc de 12 + 2 unités de offset plus 5 autres unités pour afficher l'objectif.
-      this.ymin = -10;
-      this.ymax = 10;
-      this.nodeRadius = 20;
-      this.defaultLineWidth = 3;
     }
     else if ((this.numLayers == 3) && (this.numCopies == 4)) {
       this.canvas.width = 750;
       this.canvas.height = 750;
-      this.xmin = -1;  // On veut garder un offset horizontal équivalent à une unité à gauche et à droite du premier/dernier neurone.
-      this.xmax = 18;  // L'intervalle horizontal est donc de 12 + 2 unités de offset plus 5 autres unités pour afficher l'objectif.
-      this.ymin = -10;
-      this.ymax = 10;
-      this.nodeRadius = 20;
-      this.defaultLineWidth = 3;
     }
     else {
       throw new Error("No display settings for this kind of network");
     }
+    this.xmin = -1;  // On veut garder un offset horizontal équivalent à une unité à gauche et à droite du premier/dernier neurone.
+    this.xmax = 18;  // L'intervalle horizontal est donc de 12 + 2 unités de offset plus 5 autres unités pour afficher l'objectif.
+    this.ymin = -10;
+    this.ymax = 10;
+    this.nodeRadius = 20;
+    this.defaultLineWidth = 3;
 
     this.computeNeuronsPositions();
 
@@ -397,6 +393,33 @@ class Challenge {
       dy = -6;
       x0 = 1;
       y0 = 0;
+      targetExtraDx = -5;
+    }
+    else if ((this.numCopies == 2) && (this.numLayers == 4) && (this.maxLayerSize == 2)) {
+      copyDx = 0;
+      copyDy = -10;
+      dx = 4;
+      dy = -5;
+      x0 = 1;
+      y0 = 7;
+      targetExtraDx = -2;
+    }
+    else if ((this.numCopies == 2) && (this.numLayers == 2) && (this.maxLayerSize == 2)) {
+      copyDx = 0;
+      copyDy = -10;
+      dx = 10;
+      dy = -4.3;
+      x0 = 1;
+      y0 = 8;
+      targetExtraDx = -5;
+    }
+    else if ((this.numCopies == 2) && (this.numLayers == 2) && (this.maxLayerSize == 3)) {
+      copyDx = 0;
+      copyDy = -10;
+      dx = 10;
+      dy = -3.0;
+      x0 = 1;
+      y0 = 8;
       targetExtraDx = -5;
     }
     else if ((this.numCopies == 3) && (this.numLayers == 2) && (this.maxLayerSize == 2)) {
@@ -795,6 +818,9 @@ class Challenge {
   }
 
   async autoSolve() {
+    if (this.isSolved) {
+      this.isSolved = false;
+    }
     await this.gradientDescent();
   }
 
@@ -891,25 +917,60 @@ var d1 = new Challenge("challenge1",
   minError=0.0001, 
   gradientDescentFactor = 0.001,
   gradientDescentMaxSteps = 1000,
-  epsilon = 0.001);
+  epsilon = 0.001
+);
+
+//var d2 = new Challenge("challenge2", 
+//  layers=[1,2,2,1], 
+//  inputs=[[100], [50]], 
+//  expectedOutputs=[[25], [100]], 
+//  minError=0.0001, 
+//  gradientDescentFactor = 0.001,
+//  gradientDescentMaxSteps = 1000,
+//  epsilon = 0.001
+//);
 
 var d2 = new Challenge("challenge2", 
   layers=[2,2], 
-  inputs=[[100, 0], [0, 100], [100, 100]], 
-  expectedOutputs=[[0, 75], [90, 0], [0, 0]], 
-  minError=0.005, 
-  gradientDescentFactor = 0.01,
+  inputs=[[100, 0], [0, 100]],
+  expectedOutputs=[[50, 50], [75, 15]],
+  minError=0.01, 
+  gradientDescentFactor = 0.002,
   gradientDescentMaxSteps = 1000,
-  epsilon = 0.001);
+  epsilon = 0.001
+);
 
 var d3 = new Challenge("challenge3", 
+  layers=[3,2], 
+  inputs=[[25, 66, 85], [88, 0, 95]],
+  expectedOutputs=[[95, 25], [0,100]],
+  minError=0.005, 
+  gradientDescentFactor = 0.002,
+  gradientDescentMaxSteps = 10000,
+  epsilon = 0.002
+);
+
+
+
+//var d3 = new Challenge("challenge3", 
+//  layers=[2,2], 
+//  inputs=[[100, 0], [0, 100], [100, 100]], 
+//  expectedOutputs=[[0, 75], [90, 0], [0, 0]], 
+//  minError=0.005, 
+//  gradientDescentFactor = 0.01,
+//  gradientDescentMaxSteps = 1000,
+//  epsilon = 0.001
+//);
+
+var d4 = new Challenge("challenge4", 
   layers=[3,3,2], 
   inputs=[[100, 0, 100], [100, 100, 0], [0, 100, 100], [50, 100, 50]], 
-  expectedOutputs=[[0,0], [75,25], [25,75], [50,0]], 
-  minError=0.005, 
+  expectedOutputs=[[0,0], [75,25], [25,75], [50,33]], 
+  minError=0.02, 
   gradientDescentFactor = 0.02,
   gradientDescentMaxSteps = 10000,
-  epsilon = 0.001);
+  epsilon = 0.001
+);
 
 // Activation du premier défi
 Challenge.all['challenge1'].activate();
@@ -928,6 +989,6 @@ function activateAll() {
 
 
 // debug
-activateAll()
+//activateAll()
 
 updatePageAccordingToStatus();
