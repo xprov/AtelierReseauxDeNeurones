@@ -697,7 +697,7 @@ class Defi {
     var width = 20;
     var height = 260;
 
-    var error = Math.min(1.0, this.computeError());
+    var error = Math.max(0, Math.min(1.0, this.computeError()) - this.minError);;
     let blue = 255 - Math.trunc(255 * Math.pow(error, 1));
     let red = Math.trunc(255 * Math.pow(error, 1));
     let mercury = Math.min(height, Math.trunc(Math.pow(error, 0.5) * height)); // hauteur du mercure dans le thermomètre
@@ -2013,8 +2013,9 @@ function thermometres() {
 
 // Construction des défis
 //constructor(challengeId, layers, inputs, expectedOutputs, minError = 0.001, adhocErrorFactor = 0.0002, gradientStep = 0.001, epsilon = 0.001)
-var d1 = new Defi("challenge1", [1,1], [[100]], [[65]], 0.0001, 0.0001686625);
-var d2 = new Defi("challenge2", [2,2], [[100, 0], [0, 100], [100, 100]], [[0, 75], [90, 0], [0, 0]], 0.0002, 0.0002, 0.002, 0.001);
+var d1 = new Defi("challenge1", [1,1], [[100]], [[65]], 0.0001, 0.0001, gradientStep = 0.01, epsilon = 0.01);
+var d2 = new Defi("challenge2", [2,2], [[100, 0], [0, 100], [100, 100]], [[0, 75], [90, 0], [0, 0]], 0.03, 0.0002, 0.002, 0.001);
+
 //var nwi = d1.nwi;
 //var c1 = new ChallengeNN1("challenge1");
 //var c2 = new ChallengeNN2("challenge2");
