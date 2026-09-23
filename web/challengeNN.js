@@ -11,7 +11,7 @@
  */
 
 function f_act(x) {
-  return Math.max(Math.min(x, 100), -100);
+  return Math.max(Math.min(x, 100), 0);
 }
 
 function createHatchPattern(ctx, color = "black") {
@@ -122,6 +122,14 @@ class NetworkWithInputs {
     return this.weightsIndices[index];
   }
 
+  getWeight(index) {
+    let indices = this.weightsIndices[index];
+    let i = indices[0];
+    let j = indices[1];
+    let k = indices[2];
+    return this.weights[i][j][k];
+  }
+
   setWeight(index, value) {
     let indices = this.weightsIndices[index];
     let i = indices[0];
@@ -172,7 +180,7 @@ class Defi {
   /**
    * Le `challengeId` doit correcpondre au `id` du DIV dans lequel le challenge est inséré.
    */
-  constructor(challengeId, layers, inputs, expectedOutputs, minError, adhocErrorFactor) {
+  constructor(challengeId, layers, inputs, expectedOutputs, minError = 0.001, adhocErrorFactor = 0.0002, gradientStep = 0.001, epsilon = 0.001) {
     // Devraient être initialisés par le constructeur de la classe enfant.
     this.challengeId = challengeId;
     this.layersSizes = layers;
@@ -180,18 +188,21 @@ class Defi {
     this.numCopies = expectedOutputs.length;
     this.maxLayerSize = Math.max(...this.layersSizes);
     this.parameters = [];
-    this.minError = minError
-    this.adhocErrorFactor = adhocErrorFactor
+    this.minError = minError;
+    this.adhocErrorFactor = adhocErrorFactor;
     this.isActivated = false;
     this.isSolved = false;
-    this.gradientStep = 0.001;
+    this.gradientStep = gradientStep;
+    this.epsilon = epsilon;
 
 
     // Les copies du réseau avec les différents inputs/outputs
     this.nwi = new NetworkWithInputs(layers, inputs, expectedOutputs);
 
     // Les paramètres
-    this.parameters[0] = new Parameter(challengeId);
+    for (let paramId = 0; paramId < this.nwi.numWeights; paramId++) {
+      this.parameters[paramId] = new Parameter(challengeId);
+    }
 
 
     // Ajoute le challenge à la liste de tous les challenges
@@ -209,7 +220,7 @@ class Defi {
     this.canvas.style.border = "2px solid black";
 
     // Paramètres d'affichage
-    if ((this.numLayers <= 2) && (this.numCopies <= 2)) {
+    if ((this.numLayers == 2) && (this.numCopies == 1)) {
       this.canvas.width = 650;
       this.canvas.height = 300;
       this.xmin = -1;  // On veut garder un offset horizontal équivalent à une unité à gauche et à droite du premier/dernier neurone.
@@ -223,9 +234,31 @@ class Defi {
       // this.neuronPosition[copyId][layerId][neuronId] = [x,y]
       this.computeNeuronsPositions();
     }
+    else if ((this.numLayers == 2) && (this.numCopies == 3)) {
+      this.canvas.width = 650;
+      this.canvas.height = 700;
+      this.xmin = -1;  // On veut garder un offset horizontal équivalent à une unité à gauche et à droite du premier/dernier neurone.
+      this.xmax = 18;  // L'intervalle horizontal est donc de 12 + 2 unités de offset plus 5 autres unités pour afficher l'objectif.
+      this.ymin = -10;
+      this.ymax = 10;
+      this.nodeRadius = 20;
+      this.defaultLineWidth = 3;
+
+      // Calcul des positions de neuronnes
+      // this.neuronPosition[copyId][layerId][neuronId] = [x,y]
+      this.computeNeuronsPositions();
+    }
     else {
       throw new Error("No display settings for this kind of network");
     }
+
+
+    // calcul automatique du facteur adhoc
+    // rappel : ça sert à ramener l'erreur dans une fourchette d'environ 0 à 1.
+    this.adhocErrorFactor = 1.0;
+    let initialError = this.computeError();
+    console.log(initialError);
+    this.adhocErrorFactor = 1/initialError * 0.75;
 
     // Bouton indiquant que le défi est réussi
     this.buttonSolved = document.createElement("button");
@@ -341,11 +374,20 @@ class Defi {
     let targetExtraDx;
     if ((this.numCopies == 1) && (this.numLayers == 2) && (this.maxLayerSize == 1)) {
       copyDx = 0;
-      copyDy = -10;
+      copyDy = 2;
       dx = 10;
       dy = -6;
       x0 = 1;
       y0 = 0;
+      targetExtraDx = -5;
+    }
+    else if ((this.numCopies == 3) && (this.numLayers == 2) && (this.maxLayerSize == 2)) {
+      copyDx = 0;
+      copyDy = -7;
+      dx = 10;
+      dy = -2.5;
+      x0 = 1;
+      y0 = 8;
       targetExtraDx = -5;
     }
     else {
@@ -360,6 +402,7 @@ class Defi {
         this.neuronsPositions[copyId][i] = [];
         for (let j=0; j<this.layersSizes[i]; j++) {
           this.neuronsPositions[copyId][i][j] = [x, y];
+          //console.log("position[" + copyId + "][" + i + "][" + j + "] = [" + x + ", " + y + "]");
           y += dy;
         }
         x += dx;
@@ -372,6 +415,7 @@ class Defi {
       y = y0;
       for (let j=0; j<this.layersSizes[i-1]; j++) {
         this.neuronsPositions[copyId][i][j] = [x, y];
+          //console.log("position[" + copyId + "][" + i + "][" + j + "] = [" + x + ", " + y + "]");
         y += dy;
       }
       x0 += copyDx;
@@ -423,7 +467,7 @@ class Defi {
       for (let i in this.parameters) {
         let p = this.parameters[i];
         p.label.innerHTML = p.slider.value;
-        this.nwi.setWeight(i, p.slider.value);
+        this.nwi.setWeight(i, parseFloat(p.slider.value));
       }
       this.nwi.propagate();
       this.drawSelf();
@@ -490,23 +534,25 @@ class Defi {
       }
     }
 
-
-
-
     // Finalement, on dessine la zone de sortie attendue
     ctx.lineWidth = this.defaultLineWidth;
     ctx.fillStyle = this.getGray(75);
     ctx.lineWidth = 2; 
-    ctx.moveTo(this.convertX(13.5), this.convertY(-4));
-    ctx.lineTo(this.convertX(13.5), this.convertY(4));
+    let x0 = this.neuronsPositions[0][this.numLayers-1][0][0];
+    let x1 = this.neuronsPositions[0][this.numLayers][0][0];
+    let x = (x0 + x1) / 2;
+    let y0 = this.canvas.height / 10;
+    let y1 = this.canvas.height - y0;
+    ctx.moveTo(this.convertX(x), y0);
+    ctx.lineTo(this.convertX(x), y1);
     ctx.stroke();
 
     ctx.fillStyle = "blue";
     ctx.font = "30px Arial";
-    ctx.fillText("Objectif", this.convertX(14.2), this.convertY(4));
-    ctx.fillStyle = "black";
-    ctx.font = "20px";
-    ctx.fillText("a", this.convertX(6), this.convertY(0.6));
+    //ctx.fillText("Objectif", (this.convertX(x0) + this.canvas.width)/2, y0 - 30);
+    //ctx.fillStyle = "black";
+    //ctx.font = "20px";
+    //ctx.fillText("a", this.convertX(6), this.convertY(0.6));
   }
 
 
@@ -519,8 +565,8 @@ class Defi {
    * classe enfant.
    */
   computeError() {
-    let mse = this.nwi.mse();
-    return mse * this.adhocErrorFactor * this.grosseTriche;
+    return this.nwi.mse() * this.adhocErrorFactor;
+    //return this.nwi.mse() * this.adhocErrorFactor * this.grosseTriche;
   }
 
 
@@ -607,6 +653,14 @@ class Defi {
     ctx.lineTo(x1, y1);
     ctx.stroke();
     ctx.setLineDash([]);
+
+    if (this.nwi.numWeights <= 4) {
+      let x = x0 + (x1 - x0) / 3;
+      let y = y0 + (y1 - y0) / 3;
+      ctx.font = "15px Arial";
+      ctx.fillStyle = "black";
+      ctx.fillText(paramName, x, y - 10);
+    }
   }
 
   drawNode(ctx, x, y, activation) {
@@ -663,32 +717,27 @@ class Defi {
   }
 
   gradientDescentOneIteration() {
-    let epsilon = 0.001;
 
     // On parcourt les paramètres en ordre inverse pour genre simuler
     // `back-propagation`.
-    let params = Object.keys(this.parameters);
-    params.sort().reverse();
+    //let params = Object.keys(this.parameters);
+    //params.sort().reverse();
 
     let errorBefore = this.computeError()
-
-    for (let i in params) {
-      let p = this.parameters[params[i]];
-      let x = parseFloat(p.slider.value);
-      let e0 = this.computeError()
-      p.slider.value = x + epsilon;
-      this.propagate();
-      let e1 = this.computeError()
-      p.slider.value = x - epsilon;
-      let delta = e1 - e0;
-      if (delta > 0) {
-        p.slider.value = x - this.gradientStep;
+    for (let i=this.nwi.numWeights-1; i >= 0; i--) {
+      let p = this.parameters[i];
+      let w = this.nwi.getWeight(i);
+      let e0 = this.nwi.mse();
+      this.nwi.setWeight(i, w + this.epsilon);
+      this.nwi.propagate();
+      let e1 = this.nwi.mse();
+      if (e1 - e0 > 0) {
+        p.slider.value = parseFloat(p.slider.value) - this.gradientStep;
       } 
       else {
-        p.slider.value = x + this.gradientStep;
+        p.slider.value = parseFloat(p.slider.value) + this.gradientStep;
       }
-
-      //console.log("" + params[i] + " = " + x + " -> " + p.slider.value + ", delta = " + delta + ", D_err=" + (this.computeError() - e0));
+      this.update();
     }
 
     let errorAfter = this.computeError()
@@ -1963,10 +2012,12 @@ function thermometres() {
 
 
 // Construction des défis
+//constructor(challengeId, layers, inputs, expectedOutputs, minError = 0.001, adhocErrorFactor = 0.0002, gradientStep = 0.001, epsilon = 0.001)
 var d1 = new Defi("challenge1", [1,1], [[100]], [[65]], 0.0001, 0.0001686625);
+var d2 = new Defi("challenge2", [2,2], [[100, 0], [0, 100], [100, 100]], [[0, 75], [90, 0], [0, 0]], 0.0002, 0.0002, 0.002, 0.001);
 //var nwi = d1.nwi;
 //var c1 = new ChallengeNN1("challenge1");
-var c2 = new ChallengeNN2("challenge2");
+//var c2 = new ChallengeNN2("challenge2");
 var c3 = new ChallengeNN4("challenge3");
 var c4 = new ChallengeNN3("challenge4");
 
@@ -2052,5 +2103,5 @@ if (status >= 1) {
 }
 
 // debug
-activateAll()
+//activateAll()
 
