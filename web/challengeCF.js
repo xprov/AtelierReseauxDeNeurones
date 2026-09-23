@@ -355,10 +355,16 @@ class Challenge {
     var width = 20;
     var height = 260;
 
-    var error = Math.min(1.0, this.computeError());
-    let blue = 255 - Math.trunc(255 * Math.pow(error, 0.1));
-    let red = Math.trunc(255 * Math.pow(error, 0.1));
-    let mercury = Math.min(height, Math.trunc(Math.pow(error, 0.25) * height)); // hauteur du mercure dans le thermomètre
+    //var error = Math.min(1.0, this.computeError());
+    //let blue = 255 - Math.trunc(255 * Math.pow(error, 0.1));
+    //let red = Math.trunc(255 * Math.pow(error, 0.1));
+    //let mercury = Math.min(height, Math.trunc(Math.pow(error, 0.25) * height)); // hauteur du mercure dans le thermomètre
+
+    var error = Math.max(0, Math.min(1.0, this.computeError()) - this.minError);;
+    let blue = 255 - Math.trunc(255 * Math.pow(error, 1));
+    let red = Math.trunc(255 * Math.pow(error, 1));
+    let mercury = Math.min(height, Math.trunc(Math.pow(error, 0.5) * height)); // hauteur du mercure dans le thermomètre
+
 
     //console.log("error=" + error + ", mercury=" + mercury);
 
