@@ -226,7 +226,7 @@ class Challenge {
         let p = this.parameters[i];
         p.label.innerHTML = parseFloat(p.slider.value).toFixed(3);
       }
-      console.log('Challenge : "' + this.challengeId + ' activated');
+      //console.log('Challenge : "' + this.challengeId + ' activated');
       this.drawSelf();
       this.drawThermometer();
       this.validate();
@@ -407,7 +407,7 @@ class Challenge {
         p.slider.value = x + this.gradientStep;
       }
 
-      console.log("" + params[i] + " = " + x + " -> " + p.slider.value + ", delta = " + delta + ", D_err=" + (this.computeError() - e0));
+      //console.log("" + params[i] + " = " + x + " -> " + p.slider.value + ", delta = " + delta + ", D_err=" + (this.computeError() - e0));
     }
 
     let errorAfter = this.computeError()
@@ -456,6 +456,7 @@ class ChallengeLine extends Challenge {
     this.minError = 0.00004;
     this.adhocErrorFactor = 0.01;
     this.numCurvePoints = 2;
+    this.gradientStep = 0.002;
 
     // Construction des points
     //
@@ -540,7 +541,7 @@ class ChallengePolynome2 extends Challenge {
 
   constructor(challengeId) {
     super(challengeId); // ligne obligatoire
-    this.minError = 0.0002;
+    this.minError = 0.0001;
     this.adhocErrorFactor = 1;
     this.numCurvePoints = 100;
 
@@ -626,7 +627,7 @@ class ChallengePolynome2 extends Challenge {
       //console.log("   x=" + p[0] + ", y=" + p[1] + ", f(x)=" + (a*p[0] + b) + ", err=" + err);
       mse += err*err;
     }
-    console.log("err = " + (mse / (this.numPoints)) * this.adhocErrorFactor * this.grosseTriche);
+    //console.log("err = " + (mse / (this.numPoints)) * this.adhocErrorFactor * this.grosseTriche);
     return (mse / (this.numPoints)) * this.adhocErrorFactor * this.grosseTriche
 
   }

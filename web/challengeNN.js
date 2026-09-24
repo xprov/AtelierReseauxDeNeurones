@@ -257,6 +257,10 @@ class Challenge {
       this.canvas.width = 750;
       this.canvas.height = 750;
     }
+    else if ((this.numLayers == 3) && (this.numCopies == 2)) {
+      this.canvas.width = 750;
+      this.canvas.height = 400;
+    }
     else {
       throw new Error("No display settings for this kind of network");
     }
@@ -436,6 +440,15 @@ class Challenge {
       copyDy = -4.5;
       dx = 6;
       dy = -1.2;
+      x0 = 1;
+      y0 = 8;
+      targetExtraDx = -2;
+    }
+    else if ((this.numCopies == 2) && (this.numLayers == 3) && (this.maxLayerSize == 2)) {
+      copyDx = 0;
+      copyDy = -8.5;
+      dx = 6;
+      dy = -3.2;
       x0 = 1;
       y0 = 8;
       targetExtraDx = -2;
@@ -796,7 +809,7 @@ class Challenge {
     else {
       //this.gradientStep = this.gradientStep / 1.01;
     }
-    console.log("Error delta = " + (errorAfter - errorBefore));
+    //console.log("Error delta = " + (errorAfter - errorBefore));
 
   }
 
@@ -915,26 +928,16 @@ var d1 = new Challenge("challenge1",
   inputs=[[100]], 
   expectedOutputs=[[65]], 
   minError=0.0001, 
-  gradientDescentFactor = 0.001,
+  gradientDescentFactor = 0.004,
   gradientDescentMaxSteps = 1000,
   epsilon = 0.001
 );
-
-//var d2 = new Challenge("challenge2", 
-//  layers=[1,2,2,1], 
-//  inputs=[[100], [50]], 
-//  expectedOutputs=[[25], [100]], 
-//  minError=0.0001, 
-//  gradientDescentFactor = 0.001,
-//  gradientDescentMaxSteps = 1000,
-//  epsilon = 0.001
-//);
 
 var d2 = new Challenge("challenge2", 
   layers=[2,2], 
   inputs=[[100, 0], [0, 100]],
   expectedOutputs=[[50, 50], [75, 15]],
-  minError=0.01, 
+  minError=0.02, 
   gradientDescentFactor = 0.002,
   gradientDescentMaxSteps = 1000,
   epsilon = 0.001
@@ -950,19 +953,17 @@ var d3 = new Challenge("challenge3",
   epsilon = 0.002
 );
 
-
-
-//var d3 = new Challenge("challenge3", 
-//  layers=[2,2], 
-//  inputs=[[100, 0], [0, 100], [100, 100]], 
-//  expectedOutputs=[[0, 75], [90, 0], [0, 0]], 
-//  minError=0.005, 
-//  gradientDescentFactor = 0.01,
-//  gradientDescentMaxSteps = 1000,
-//  epsilon = 0.001
-//);
-
 var d4 = new Challenge("challenge4", 
+  layers=[2,2,2], 
+  inputs=[[100, 0], [0, 100]], 
+  expectedOutputs=[[25, 75], [100, 100]], 
+  minError=0.001, 
+  gradientDescentFactor = 0.015,
+  gradientDescentMaxSteps = 1000,
+  epsilon = 0.001
+);
+
+var d5 = new Challenge("challenge5", 
   layers=[3,3,2], 
   inputs=[[100, 0, 100], [100, 100, 0], [0, 100, 100], [50, 100, 50]], 
   expectedOutputs=[[0,0], [75,25], [25,75], [50,33]], 
@@ -989,6 +990,6 @@ function activateAll() {
 
 
 // debug
-//activateAll()
+activateAll()
 
 updatePageAccordingToStatus();
