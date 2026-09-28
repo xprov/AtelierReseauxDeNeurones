@@ -990,6 +990,6 @@ function activateAll() {
 
 
 // debug
-activateAll()
+//activateAll()
 
 updatePageAccordingToStatus();
