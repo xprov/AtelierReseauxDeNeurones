@@ -1,6 +1,6 @@
 /**
  * Implémentation du client web pour la partie "entraînement d'un réseau de
- * neurones" dans le câdre de la "Classe Techno" 2023.
+ * neurones" (mission 3)
  */
 
 /**
